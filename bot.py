@@ -20,9 +20,8 @@ from aiogram.filters import CommandStart, Command
 TOKEN       = "8960573135:AAGNDzTdvtPS33u441smZGYp2KL4RRp3ZOU"
 ADMINS      = [8600228184]
 SHOP_NAME   = "CramFlow — Цветы"
-SHOP_PHONE  = "+7 (999) 000-00-00"
-CHANNEL_URL = "https://t.me/ваш_канал"
-SUPPORT_TG  = "@ваш_менеджер"
+CHANNEL_URL = "https://t.me/CramFlow"
+SUPPORT_TG  = "@Cramflow_support"
 
 # Путь к фото приветствия — положи файл рядом с bot.py и укажи имя
 WELCOME_PHOTO_PATH = "welcome.jpg"  # ← переименуй своё фото в welcome.jpg
