@@ -504,7 +504,7 @@ async def do_search(message: Message, state: FSMContext) -> None:
 async def support(call: CallbackQuery) -> None:
     await edit_or_answer(
         call.message,
-        f"💬 <b>Поддержка</b>\n\nМенеджер: {SUPPORT_TG}\n📞 \n\n⏰ 9:00 – 21:00",
+        f"💬 <b>Поддержка</b>\n\nМенеджер: {SUPPORT_TG}\n \n⏰ 8:00 – 21:00",
         reply_markup=ikb([btn("🏠 Меню", "main_menu")]),
         parse_mode="HTML",
     )
