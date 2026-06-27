@@ -18,7 +18,7 @@ from aiogram.filters import CommandStart, Command
 #  КОНФИГУРАЦИЯ
 # ══════════════════════════════════════════════════════════════
 TOKEN       = "8960573135:AAGNDzTdvtPS33u441smZGYp2KL4RRp3ZOU"
-OWNER_ID    = 1829746409
+ADMINS      = [1829746409]
 SHOP_NAME   = "CramFlow — Цветы"
 SHOP_PHONE  = "+7 (999) 000-00-00"
 CHANNEL_URL = "https://t.me/ваш_канал"
@@ -186,7 +186,7 @@ def orders_all(status: str | None = None):
             return con.execute(
                 "SELECT * FROM orders WHERE status=? ORDER BY id DESC LIMIT 30", (status,)
             ).fetchall()
-        return con.execute("SELECT * FROM orders ORDER BY id DESC LIMIT 30").fetchall()
+        return con.execute("SELECT * FROM orders WHERE status!='cancelled' ORDER BY id DESC LIMIT 30").fetchall()
 
 def order_status_set(order_id: int, status: str):
     with get_db() as con:
@@ -195,6 +195,7 @@ def order_status_set(order_id: int, status: str):
 STATUS = {
     "new":       "🆕 Новый",
     "confirmed": "✅ Подтверждён",
+    "inwork":    "⏳ В работе",
     "delivery":  "🚚 Доставляется",
     "done":      "🎉 Выполнен",
     "cancelled": "❌ Отменён",
@@ -325,7 +326,7 @@ bot = Bot(token=TOKEN)
 dp  = Dispatcher(storage=MemoryStorage())
 
 def is_admin(uid: int) -> bool:
-    return uid == OWNER_ID
+    return uid in ADMINS
 
 # ══════════════════════════════════════════════════════════════
 #  СТАРТ
@@ -337,8 +338,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
 
     text = (
         f"👋 Привет, <b>{name}</b>!\n\n"
-        f"Вас приветствует <b>CramFlow</b> 🌹\n"
-        f"Оптовый и розничный магазин цветов.\n\n"
+        f"🌹 <b>CramFlow — Цветы</b>\n\n"
         f"Присылай бюджет, настроение или фото — соберём букет за 15 минут. Без лишних вопросов.\n\n"
         f"🕐 Доставка по Москве от 1 часа — в офис, домой, на свидание\n"
         f"🌿 Гарантия свежести 5 дней — если завянут раньше, сделаем новый бесплатно\n"
@@ -651,11 +651,16 @@ async def do_confirm(call: CallbackQuery, state: FSMContext) -> None:
         f"🏠 {data['address']}\n\n"
         f"TG: @{call.from_user.username or '—'} | <code>{call.from_user.id}</code>"
     )
-    try:
-        await bot.send_message(OWNER_ID, owner_text,
-                               parse_mode="HTML", reply_markup=kb_order_status(order_id))
-    except Exception as e:
-        log.warning(f"Не удалось отправить уведомление владельцу: {e}")
+    for admin_id in ADMINS:
+        try:
+            await bot.send_message(
+                admin_id,
+                owner_text,
+                parse_mode="HTML",
+                reply_markup=kb_order_status(order_id)
+            )
+        except Exception as e:
+            log.warning(f"Не удалось отправить админу {admin_id}: {e}")
 
     await call.message.edit_text(
         f"✅ <b>Заказ #{order_id} принят!</b>\n\n"
@@ -925,7 +930,7 @@ async def a_stats(call: CallbackQuery) -> None:
     if not is_admin(call.from_user.id): return
     with get_db() as con:
         total   = con.execute("SELECT COUNT(*) c FROM orders").fetchone()["c"]
-        revenue = con.execute("SELECT COALESCE(SUM(total),0) s FROM orders").fetchone()["s"]
+        revenue = con.execute("SELECT COALESCE(SUM(total),0) s FROM orders WHERE status='done'").fetchone()["s"]
         new_cnt = con.execute("SELECT COUNT(*) c FROM orders WHERE status='new'").fetchone()["c"]
         done    = con.execute("SELECT COUNT(*) c FROM orders WHERE status='done'").fetchone()["c"]
         bq_cnt  = con.execute("SELECT COUNT(*) c FROM bouquets WHERE active=1").fetchone()["c"]
@@ -941,6 +946,54 @@ async def a_stats(call: CallbackQuery) -> None:
     )
     await call.message.edit_text(text,
                                   reply_markup=ikb([btn("◀️ Назад", "a_back")]), parse_mode="HTML")
+
+
+# ══════════════════════════════════════════════════════════════
+#  ADMIN 2.0
+# ══════════════════════════════════════════════════════════════
+@dp.message(Command("admins"))
+async def admins_list(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    txt = "👥 Администраторы:\n\n"
+    txt += "\n".join(str(i) for i in ADMINS)
+    await message.answer(txt)
+
+@dp.message(Command("stats"))
+async def stats_cmd(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+
+    with get_db() as con:
+        total = con.execute(
+            "SELECT COUNT(*) c FROM orders"
+        ).fetchone()["c"]
+
+        done = con.execute(
+            "SELECT COUNT(*) c FROM orders WHERE status='done'"
+        ).fetchone()["c"]
+
+        cancelled = con.execute(
+            "SELECT COUNT(*) c FROM orders WHERE status='cancelled'"
+        ).fetchone()["c"]
+
+        revenue = con.execute(
+            "SELECT COALESCE(SUM(total),0) s FROM orders WHERE status='done'"
+        ).fetchone()["s"]
+
+    avg = revenue // done if done else 0
+    percent = round(cancelled / total * 100) if total else 0
+
+    await message.answer(
+        f"📊 Статистика\n\n"
+        f"Заказов: {total}\n"
+        f"Выполнено: {done}\n"
+        f"Отменено: {cancelled}\n"
+        f"Процент отмен: {percent}%\n"
+        f"Выручка: {revenue} ₽\n"
+        f"Средний чек: {avg} ₽"
+    )
+
 
 # ══════════════════════════════════════════════════════════════
 #  ЗАПУСК
