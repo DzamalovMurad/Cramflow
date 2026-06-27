@@ -18,7 +18,7 @@ from aiogram.filters import CommandStart, Command
 #  КОНФИГУРАЦИЯ
 # ══════════════════════════════════════════════════════════════
 TOKEN       = "8960573135:AAGNDzTdvtPS33u441smZGYp2KL4RRp3ZOU"
-ADMINS      = [1829746409]
+ADMINS      = [8600228184]
 SHOP_NAME   = "CramFlow — Цветы"
 SHOP_PHONE  = "+7 (999) 000-00-00"
 CHANNEL_URL = "https://t.me/ваш_канал"
@@ -30,8 +30,8 @@ WELCOME_PHOTO_PATH = "welcome.jpg"  # ← переименуй своё фото
 PAYMENT_INFO = (
     "💳 <b>Оплата:</b>\n"
     "• Наличными курьеру\n"
-    "• Сбер: <code>1234 5678 9012 3456</code> (Иван И.)\n"
-    "• Тинькофф: <code>+7 (999) 000-00-00</code>"
+    "• Перевод по реквезитам ( уточнять у менеджера )\n"
+
 )
 
 logging.basicConfig(
